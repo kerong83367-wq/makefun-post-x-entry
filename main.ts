@@ -24,12 +24,24 @@ if (
 }
 
 const url = (data as { url: string }).url;
-const m = /^https:\/\/(x\.com|twitter\.com)\/[^/]+\/status\/\d+/.exec(url);
+const m = /^https:\/\/(x\.com|twitter\.com)\/[^/]+\/status\/\d+$/.exec(url);
 if (m === null) {
   console.error(`POST.json does not name an X status URL: ${url}`);
   process.exit(1);
 }
 
 mkdirSync(OUTPUT_DIR, { recursive: true });
-copyFileSync(source, join(OUTPUT_DIR, "POST.json"));
-console.log(`POST.json copied to ${OUTPUT_DIR}/POST.json for ${url}`);
+const dest = join(OUTPUT_DIR, "POST.json");
+copyFileSync(source, dest);
+// Read the copy back: the grader must get exactly the URL we validated,
+// not a partial write or a stale file from an earlier run.
+const written: unknown = JSON.parse(readFileSync(dest, "utf8"));
+if (
+  typeof written !== "object" ||
+  written === null ||
+  (written as { url?: unknown }).url !== url
+) {
+  console.error(`Verification failed: ${dest} does not contain ${url}`);
+  process.exit(1);
+}
+console.log(`POST.json verified at ${dest} for ${url}`);
